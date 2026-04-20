@@ -990,32 +990,27 @@ function activateItem(key, fromClick = false) {
 // ═══════════════════════════════════════════════
 //  INTERSECTION OBSERVER (scroll → map)
 // ═══════════════════════════════════════════════
-const _intersecting = new Set();
-const io = new IntersectionObserver((entries) => {
-  entries.forEach(e => {
-    if (e.isIntersecting) _intersecting.add(e.target);
-    else _intersecting.delete(e.target);
+// ─── Scroll → activate nearest center item ────────
+let _rafId = null;
+scrollEl.addEventListener('scroll', () => {
+  if (_rafId) return;
+  _rafId = requestAnimationFrame(() => {
+    _rafId = null;
+    if (Date.now() <= clickLockUntil) return;
+    const containerMid = scrollEl.getBoundingClientRect().top + scrollEl.clientHeight / 2;
+    let best = null, bestDist = Infinity;
+    document.querySelectorAll('.timeline-item').forEach(el => {
+      const rect = el.getBoundingClientRect();
+      const itemMid = rect.top + rect.height / 2;
+      const dist = Math.abs(itemMid - containerMid);
+      if (dist < bestDist) { bestDist = dist; best = el; }
+    });
+    if (best) {
+      const key = best.dataset.key;
+      if (key && key !== activeKey) activateItem(key, false);
+    }
   });
-  if (Date.now() <= clickLockUntil) return;
-  const containerMid = scrollEl.getBoundingClientRect().top + scrollEl.clientHeight / 2;
-  let best = null, bestDist = Infinity;
-  _intersecting.forEach(el => {
-    const rect = el.getBoundingClientRect();
-    const itemMid = rect.top + rect.height / 2;
-    const dist = Math.abs(itemMid - containerMid);
-    if (dist < bestDist) { bestDist = dist; best = el; }
-  });
-  if (best) {
-    const key = best.dataset.key;
-    if (key && key !== activeKey) activateItem(key, false);
-  }
-}, {
-  root: scrollEl,
-  rootMargin: '-40% 0px -40% 0px',
-  threshold: [0.1, 0.5, 1.0],
-});
-
-document.querySelectorAll('.timeline-item').forEach(el => io.observe(el));
+}, { passive: true });
 
 // ─── Title button → activate or detail ───────────
 scrollEl.addEventListener('click', e => {
