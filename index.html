@@ -990,19 +990,23 @@ function activateItem(key, fromClick = false) {
 // ═══════════════════════════════════════════════
 //  INTERSECTION OBSERVER (scroll → map)
 // ═══════════════════════════════════════════════
+const _intersecting = new Set();
 const io = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) _intersecting.add(e.target);
+    else _intersecting.delete(e.target);
+  });
   if (Date.now() <= clickLockUntil) return;
-  // pick the item whose center is closest to the scroll container's center
   const containerMid = scrollEl.getBoundingClientRect().top + scrollEl.clientHeight / 2;
   let best = null, bestDist = Infinity;
-  entries.forEach(e => {
-    if (!e.isIntersecting) return;
-    const itemMid = e.boundingClientRect.top + e.boundingClientRect.height / 2;
+  _intersecting.forEach(el => {
+    const rect = el.getBoundingClientRect();
+    const itemMid = rect.top + rect.height / 2;
     const dist = Math.abs(itemMid - containerMid);
-    if (dist < bestDist) { bestDist = dist; best = e; }
+    if (dist < bestDist) { bestDist = dist; best = el; }
   });
   if (best) {
-    const key = best.target.dataset.key;
+    const key = best.dataset.key;
     if (key && key !== activeKey) activateItem(key, false);
   }
 }, {
