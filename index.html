@@ -1028,6 +1028,8 @@ function loadThumbForKey(key) {
 setTimeout(() => {
   const firstKey = ITINERARY[0].items[0]._key;
   activateItem(firstKey, false);
+  const firstEl = document.getElementById(`item-${firstKey}`);
+  if (firstEl) firstEl.scrollIntoView({ block: 'center', behavior: 'instant' });
 }, 400);
 </script>
 
