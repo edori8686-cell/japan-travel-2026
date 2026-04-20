@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2026 교토·오사카 여행 일정</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    :root {
+      --c1: #3b82f6;
+      --c2: #22c55e;
+      --c3: #f97316;
+      --c4: #ef4444;
+      --c5: #a855f7;
+      --bg: #f4f3ef;
+      --card: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2ddd8;
+      --header-h: 52px;
+      --tabs-h: 46px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ─── HEADER ─────────────────────────── */
+    header {
+      height: var(--header-h);
+      background: #0f172a;
+      color: white;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 10px;
+      flex-shrink: 0;
+      z-index: 200;
+    }
+    header .flag { font-size: 22px; }
+    header h1 { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
+    header .meta { margin-left: auto; font-size: 11px; color: rgba(255,255,255,0.45); }
+
+    /* ─── MAIN SPLIT ─────────────────────── */
+    .main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ─── MAP ────────────────────────────── */
+    #map {
+      width: 55%;
+      flex-shrink: 0;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* ─── TIMELINE PANEL ─────────────────── */
+    .timeline-panel {
+      width: 45%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+      overflow: hidden;
+    }
+
+    /* ─── DAY TABS ───────────────────────── */
+    .day-tabs {
+      height: var(--tabs-h);
+      display: flex;
+      background: #1e293b;
+      flex-shrink: 0;
+    }
+
+    .day-tab {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      font-size: 11px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.4);
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: color 0.2s, border-color 0.2s;
+      user-select: none;
+    }
+    .day-tab:hover { color: rgba(255,255,255,0.75); }
+    .day-tab.active { color: white; border-bottom-color: var(--tab-color, white); }
+    .day-tab .d-num { font-size: 13px; font-weight: 800; }
+    .day-tab .d-date { font-size: 9px; opacity: 0.7; }
+
+    /* ─── SCROLLABLE CONTENT ─────────────── */
+    .timeline-scroll {
+      flex: 1;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+      padding: 12px 16px 80px;
+    }
+    .timeline-scroll::-webkit-scrollbar { width: 4px; }
+    .timeline-scroll::-webkit-scrollbar-track { background: transparent; }
+    .timeline-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* ─── DAY SECTION ────────────────────── */
+    .day-section { margin-bottom: 4px; }
+
+    .day-header {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 18px 0 7px;
+      margin-bottom: 2px;
+    }
+    .day-badge {
+      font-size: 10px; font-weight: 800; color: white;
+      background: var(--badge-color, #888);
+      padding: 1px 6px;
+      border-radius: 3px;
+      flex-shrink: 0;
+      letter-spacing: 0.3px;
+    }
+    .day-header-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+    .day-info { display: flex; align-items: baseline; gap: 5px; flex-shrink: 0; }
+    .day-info .day-title { font-size: 11px; font-weight: 700; color: var(--text); }
+    .day-info .day-date  { font-size: 10px; color: var(--muted); }
+
+    /* ─── TIMELINE TRACK ─────────────────── */
+    .timeline-track {
+      position: relative;
+      padding-left: 20px;
+    }
+    .timeline-track::before {
+      content: '';
+      position: absolute;
+      left: 5px; top: 8px; bottom: 8px;
+      width: 2px;
+      background: linear-gradient(to bottom, var(--track-color, #ddd), transparent);
+      opacity: 0.4;
+    }
+
+    /* ─── TIMELINE ITEM ──────────────────── */
+    .timeline-item {
+      position: relative;
+      margin-bottom: 6px;
+      cursor: pointer;
+    }
+
+    /* dot on the track */
+    .tl-dot {
+      position: absolute;
+      left: -20px;
+      top: 16px;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--item-color);
+      border: 2px solid white;
+      box-shadow: 0 0 0 1.5px var(--item-color);
+      transition: transform 0.25s, box-shadow 0.25s;
+      z-index: 2;
+    }
+    .timeline-item.active .tl-dot {
+      transform: scale(1.5);
+      box-shadow: 0 0 0 2px var(--item-color), 0 0 10px var(--item-color-alpha, rgba(0,0,0,0.2));
+    }
+
+    /* card */
+    .tl-card {
+      background: var(--card);
+      border-radius: 10px;
+      border: 1.5px solid var(--border);
+      overflow: hidden;
+      transition: border-color 0.25s, box-shadow 0.25s, transform 0.15s;
+    }
+    .timeline-item:hover .tl-card { transform: translateX(2px); }
+    .timeline-item.active .tl-card {
+      border-color: var(--item-color);
+      box-shadow: 0 3px 16px -4px var(--item-color-alpha, rgba(0,0,0,0.2));
+    }
+
+    /* card header (always visible) */
+    .tl-head {
+      display: flex;
+      align-items: center;
+      padding: 10px 12px;
+      gap: 8px;
+    }
+    .tl-time {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--item-color);
+      min-width: 36px;
+      font-variant-numeric: tabular-nums;
+    }
+    .tl-title {
+      font-size: 13px;
+      font-weight: 600;
+      flex: 1;
+      line-height: 1.4;
+    }
+    .tl-num {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: var(--item-color);
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      opacity: 0.7;
+    }
+    .timeline-item.active .tl-num { opacity: 1; }
+    .tl-chevron {
+      font-size: 9px;
+      color: var(--muted);
+      transition: transform 0.25s;
+      flex-shrink: 0;
+    }
+    .timeline-item.expanded .tl-chevron { transform: rotate(180deg); }
+
+    /* expandable details */
+    .tl-details {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .timeline-item.expanded .tl-details { max-height: 300px; }
+
+    .tl-details-inner {
+      border-top: 1px solid var(--border);
+      padding: 10px 12px 10px 56px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.75;
+    }
+    .tl-desc { margin-bottom: 8px; }
+    .tl-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+    .tl-tag {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 20px;
+      background: var(--bg);
+      color: var(--item-color);
+      border: 1px solid var(--item-color);
+      opacity: 0.75;
+    }
+
+    /* ─── MAP ATTRIBUTION FIX ────────────── */
+    .leaflet-control-attribution { font-size: 9px !important; }
+
+    /* ─── MOBILE ─────────────────────────── */
+    @media (max-width: 720px) {
+      .main { flex-direction: column; }
+      #map { width: 100%; height: 42vh; }
+      .timeline-panel { width: 100%; height: 58vh; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <span class="flag">🗾</span>
+  <h1>2026 교토 · 오사카 여행 일정</h1>
+  <span class="meta">4/22 (수) ~ 4/26 (일) · 4박 5일</span>
+</header>
+
+<div class="main">
+  <div id="map"></div>
+
+  <div class="timeline-panel">
+    <div class="day-tabs" id="dayTabs"></div>
+    <div class="timeline-scroll" id="timelineScroll"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  DATA
+// ═══════════════════════════════════════════════
+const DAY_COLORS = ['#3b82f6','#22c55e','#f97316','#ef4444','#a855f7'];
+const DAY_ALPHAS = [
+  'rgba(59,130,246,0.25)',
+  'rgba(34,197,94,0.25)',
+  'rgba(249,115,22,0.25)',
+  'rgba(239,68,68,0.25)',
+  'rgba(168,85,247,0.25)',
+];
+
+const ITINERARY = [
+  {
+    day: 1, date: '4/22 (수)', title: '출발 · 교토 도착',
+    items: [
+      {
+        time: '09:50', title: '간사이 국제공항 도착 ✈️',
+        lat: 34.4320, lng: 135.2304,
+        desc: '1터미널 입국 → 하루카 특급 탑승 (75분, 교토역까지). 진에어 7C1391 도착.',
+        tags: ['공항','교통']
+      },
+      {
+        time: '12:00', title: '마르블랑슈 · 교토역',
+        lat: 34.9855, lng: 135.7582,
+        desc: '교토역 JR 이세탄 3층. 교토 대표 과자·케이크. 도착 즉시 방문 추천.',
+        tags: ['맛집','디저트']
+      },
+      {
+        time: '14:00', title: '포르자 교토 체크인 🏨',
+        lat: 35.0029, lng: 135.7728,
+        desc: '포르자 교토 시조 카와라마치 체크인 (14:00~). 가와라마치역 도보권.',
+        tags: ['숙소']
+      },
+      {
+        time: '15:00', title: '후시미이나리신사 ⛩️',
+        lat: 34.9671, lng: 135.7727,
+        desc: '입장 무료 / 24시간. 센본도리이(중간)까지 30~40분. 사진 목적이면 오전 7~9시 or 해질 무렵. 낮엔 인파 많음.',
+        tags: ['무료','신사','사진']
+      },
+      {
+        time: '18:00', title: '기온거리 · 야사카신사 🏮',
+        lat: 35.0038, lng: 135.7754,
+        desc: '무료 / 24시간. 밤 8시 이후 강추 — 붉은 등불 야경 & 한산. 하나미코지 골목 사진 촬영 금지.',
+        tags: ['무료','야경','현지인']
+      },
+      {
+        time: '19:30', title: '가모가와강 야경 산책',
+        lat: 35.0116, lng: 135.7681,
+        desc: '가모가와강변 야경 산책. 야사카신사에서 도보 10분.',
+        tags: ['무료','산책']
+      },
+    ]
+  },
+  {
+    day: 2, date: '4/23 (목)', title: '교토 풀데이',
+    items: [
+      {
+        time: '07:00', title: '아라시야마 대나무숲 🎋',
+        lat: 35.0094, lng: 135.6761,
+        desc: '란덴선 6:10 첫차. 치쿠린 죽림 무료 / 24시간. 이른 아침(7~8시) 방문 추천. 텐류지 북문→북쪽으로 죽림 터널 코스.',
+        tags: ['무료','자연','이른아침']
+      },
+      {
+        time: '09:00', title: '규카츠 점심 (키주로)',
+        lat: 35.0037, lng: 135.7676,
+        desc: '키주로 10시 오픈런 또는 타이쇼하나나 검토. 가와라마치 인근.',
+        tags: ['맛집','규카츠']
+      },
+      {
+        time: '13:00', title: '은각사 (긴카쿠지) 🏛️',
+        lat: 35.0267, lng: 135.7981,
+        desc: '500엔 (현금만) / 08:30~17:00. 이끼 정원 유명. 오픈 직후 방문 추천.',
+        tags: ['유료','사찰']
+      },
+      {
+        time: '14:30', title: '철학의 길 → 난젠지 수로각',
+        lat: 35.0183, lng: 135.7944,
+        desc: '철학의 길 2.1km 무료 산책 (30분). 난젠지 경내·수로각(アクアダクト) 무료 입장. 산문·정원은 별도 600엔.',
+        tags: ['무료','산책','산책코스']
+      },
+    ]
+  },
+  {
+    day: 3, date: '4/24 (금)', title: '교토 마무리 · 오사카 이동',
+    items: [
+      {
+        time: '06:00', title: '청수사 새벽 오픈런 🌅',
+        lat: 34.9948, lng: 135.7851,
+        desc: '400~500엔 (현금만). 6시 오픈 직후 관광객 없는 고요한 청수사. 9시부터 급격히 혼잡. 절벽 위 목조 무대 포토스팟.',
+        tags: ['유료','오픈런','사찰']
+      },
+      {
+        time: '07:00', title: '니넨자카 · 산넨자카 골목',
+        lat: 34.9980, lng: 135.7821,
+        desc: '무료 / 24시간. 청수사→산넨자카→니넨자카 내리막 코스. 돌바닥 미끄러움 주의. 응커피 30분 웨이팅.',
+        tags: ['무료','골목','포토']
+      },
+      {
+        time: '11:00', title: '교토 체크아웃 → 오사카 이동',
+        lat: 35.0029, lng: 135.7728,
+        desc: '포르자 교토 체크아웃. 한큐전철 650엔 약 70분 → 오사카 난바. 가와라마치역 출발.',
+        tags: ['숙소','교통']
+      },
+      {
+        time: '13:00', title: '그레이서리 오사카 체크인',
+        lat: 34.6686, lng: 135.5042,
+        desc: '그레이서리 오사카 난바 체크인 (14:00~). 짐 먼저 맡기고 이동 가능.',
+        tags: ['숙소']
+      },
+      {
+        time: '15:00', title: '다카시마야 · 덴덴타운 🛍️',
+        lat: 34.6659, lng: 135.5014,
+        desc: '다카시마야 난바점. 덴덴타운 전자상가·오타쿠 거리. 도보 권역.',
+        tags: ['쇼핑']
+      },
+      {
+        time: '17:00', title: '도톤보리 · 신사이바시',
+        lat: 34.6689, lng: 135.5012,
+        desc: '글리코 러닝맨 인증샷. 에비스바시 다리 야경. 타코야키·쿠시카츠·오코노미야키.',
+        tags: ['관광','먹방','야경']
+      },
+      {
+        time: '21:00', title: '호젠지 요코초 🏮',
+        lat: 34.6678, lng: 135.5025,
+        desc: '도톤보리 뒤편 이끼낀 골목. 미즈카케 부동명왕. 미슐랭 비스트로도 숨어있음. 밤 9시 이후 분위기 최고.',
+        tags: ['야경','현지인','숨은명소']
+      },
+    ]
+  },
+  {
+    day: 4, date: '4/25 (토)', title: '오사카 관광 (주유패스)',
+    items: [
+      {
+        time: '09:30', title: '고자부네 뱃놀이 ⛵',
+        lat: 34.6873, lng: 135.5262,
+        desc: '1,800엔 / 주유패스 무료. 10시 출발. 도착 즉시 시간표 확보 필수 (만석 마감). 벚꽃 시즌 주유패스 제한 여부 현장 확인.',
+        tags: ['주유패스','예약필요','오사카성']
+      },
+      {
+        time: '11:00', title: '오사카성 천수각 🏯',
+        lat: 34.6873, lng: 135.5262,
+        desc: '1,200엔 (2025.4 인상) / 주유패스 무료. 09:00~18:00. 8층 전망대 360도 파노라마. 중학생 이하 무료.',
+        tags: ['주유패스','역사']
+      },
+      {
+        time: '13:00', title: '점심 · 쿠로키리시마 (라이프슈퍼)',
+        lat: 34.6950, lng: 135.5020,
+        desc: '우메다 근처 라이프슈퍼. 쿠로키리시마 막걸리·현지 도시락 구매 가능.',
+        tags: ['점심','현지마트']
+      },
+      {
+        time: '14:30', title: '우메다 공중정원 스카이빌딩 🌆',
+        lat: 34.7056, lng: 135.4899,
+        desc: '2,000엔 / 주유패스 15시 전 무료. 173m 전망대. 15시 이후는 할인만 적용. 우메다역에서 도보 13분.',
+        tags: ['주유패스','15시전','전망대']
+      },
+      {
+        time: '17:00', title: '신세카이 · 츠텐카쿠 🗼',
+        lat: 34.6527, lng: 135.5063,
+        desc: '1,200엔 / 주유패스 무료. 쿠시카츠 발상지 — 소스 두번 찍기 절대 금지! 빌리켄 발바닥 소원. 밤 네온사인 압도적.',
+        tags: ['주유패스','레트로','쿠시카츠']
+      },
+      {
+        time: '19:30', title: '원더크루즈 🚢',
+        lat: 34.6689, lng: 135.5012,
+        desc: '2,000엔 / 주유패스 무료. 도톤보리 강 리버워크 B1. 사전 예약 필수. 17:30~18:00 해질 무렵 최인기. 20분 운항. 3개국어 안내.',
+        tags: ['주유패스','예약필수','크루즈']
+      },
+    ]
+  },
+  {
+    day: 5, date: '4/26 (일)', title: '귀국',
+    items: [
+      {
+        time: '11:00', title: '그레이서리 오사카 체크아웃',
+        lat: 34.6686, lng: 135.5042,
+        desc: '체크아웃 후 마지막 쇼핑. 면세점 카발란 구매 예정. 돈키호테·드럭스토어 마지막 체크.',
+        tags: ['숙소','쇼핑']
+      },
+      {
+        time: '12:00', title: '마지막 점심 · 시내 쇼핑',
+        lat: 34.6659, lng: 135.5014,
+        desc: '난바 주변 마지막 식사. 돈키호테 면세 쇼핑 (세전 5,000엔+ → Tax Free 8~10%).',
+        tags: ['맛집','면세쇼핑']
+      },
+      {
+        time: '16:00', title: '라피트 탑승 → 간사이 공항',
+        lat: 34.6670, lng: 135.5013,
+        desc: '난바역 → 간사이 공항 라피트 38분 (1,450엔) or 급행. 늦어도 16시 출발. 공항 2터미널.',
+        tags: ['교통','귀국']
+      },
+      {
+        time: '19:55', title: '7C1308 귀국 ✈️',
+        lat: 34.4320, lng: 135.2304,
+        desc: '간사이 국제공항 2터미널 출발. 진에어 귀국편.',
+        tags: ['항공','귀국']
+      },
+    ]
+  }
+];
+
+// ═══════════════════════════════════════════════
+//  MAP INIT
+// ═══════════════════════════════════════════════
+const map = L.map('map', {
+  center: [34.88, 135.60],
+  zoom: 10,
+  zoomControl: true,
+});
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  maxZoom: 19,
+}).addTo(map);
+
+// ═══════════════════════════════════════════════
+//  MARKERS
+// ═══════════════════════════════════════════════
+const markers = {};   // key → { marker, dayIdx, itemIdx }
+let activeKey = null;
+let globalNum = 1;
+
+function makeIcon(color, num, active) {
+  const s = active ? 34 : 26;
+  const fs = active ? 11 : 9;
+  return L.divIcon({
+    className: '',
+    html: `<div style="
+      width:${s}px;height:${s}px;
+      background:${color};
+      border-radius:50% 50% 50% 0;
+      transform:rotate(-45deg);
+      border:2.5px solid white;
+      box-shadow:0 2px 8px rgba(0,0,0,.35);
+      display:flex;align-items:center;justify-content:center;
+    "><span style="transform:rotate(45deg);color:#fff;font-size:${fs}px;font-weight:800;line-height:1">${num}</span></div>`,
+    iconSize: [s, s],
+    iconAnchor: [s / 2, s],
+    popupAnchor: [0, -(s + 4)],
+  });
+}
+
+ITINERARY.forEach((day, di) => {
+  const color = DAY_COLORS[di];
+  day.items.forEach((item, ii) => {
+    const key = `${di}-${ii}`;
+    item._key = key;
+    item._num = globalNum++;
+
+    const m = L.marker([item.lat, item.lng], { icon: makeIcon(color, item._num, false), title: item.title })
+      .addTo(map)
+      .bindTooltip(`<b>${item.title}</b><br><small>${day.date}</small>`, { direction: 'right', offset: [8, 0] });
+
+    m.on('click', () => {
+      activateItem(key, true);
+    });
+
+    markers[key] = { marker: m, dayIdx: di, itemIdx: ii };
+  });
+});
+
+function flyToItem(key) {
+  const info = markers[key];
+  if (!info) return;
+  const item = ITINERARY[info.dayIdx].items[info.itemIdx];
+  const zoom = item.lat < 34.6 ? 13 : 15;
+  map.flyTo([item.lat, item.lng], zoom, { duration: 1.0, easeLinearity: 0.5 });
+}
+
+function setActiveMarker(key) {
+  if (activeKey === key) return;
+  if (activeKey && markers[activeKey]) {
+    const prev = markers[activeKey];
+    const prevItem = ITINERARY[prev.dayIdx].items[prev.itemIdx];
+    prev.marker.setIcon(makeIcon(DAY_COLORS[prev.dayIdx], prevItem._num, false));
+  }
+  if (markers[key]) {
+    const curr = markers[key];
+    const currItem = ITINERARY[curr.dayIdx].items[curr.itemIdx];
+    curr.marker.setIcon(makeIcon(DAY_COLORS[curr.dayIdx], currItem._num, true));
+  }
+  activeKey = key;
+}
+
+// ═══════════════════════════════════════════════
+//  RENDER TIMELINE
+// ═══════════════════════════════════════════════
+const dayTabsEl   = document.getElementById('dayTabs');
+const scrollEl    = document.getElementById('timelineScroll');
+
+// Day tabs
+ITINERARY.forEach((day, di) => {
+  const tab = document.createElement('div');
+  tab.className = 'day-tab';
+  tab.style.setProperty('--tab-color', DAY_COLORS[di]);
+  tab.dataset.di = di;
+  tab.innerHTML = `<span class="d-num">D${di + 1}</span><span class="d-date">${day.date.split(' ')[0]}</span>`;
+  tab.addEventListener('click', () => {
+    document.getElementById(`day-${di}`).scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  dayTabsEl.appendChild(tab);
+});
+
+// Timeline sections
+ITINERARY.forEach((day, di) => {
+  const color = DAY_COLORS[di];
+  const alpha = DAY_ALPHAS[di];
+
+  const sec = document.createElement('div');
+  sec.className = 'day-section';
+  sec.id = `day-${di}`;
+
+  sec.innerHTML = `
+    <div class="day-header">
+      <div class="day-badge" style="--badge-color:${color};background:${color}">D${di + 1}</div>
+      <div class="day-info">
+        <span class="day-date">${day.date}</span>
+        <span class="day-title">${day.title}</span>
+      </div>
+      <div class="day-header-line"></div>
+    </div>
+    <div class="timeline-track" style="--track-color:${color}" id="track-${di}"></div>
+  `;
+  scrollEl.appendChild(sec);
+
+  const track = sec.querySelector(`#track-${di}`);
+
+  day.items.forEach((item, ii) => {
+    const key = item._key;
+    const tagsHtml = (item.tags || []).map(t =>
+      `<span class="tl-tag">${t}</span>`
+    ).join('');
+
+    const el = document.createElement('div');
+    el.className = 'timeline-item';
+    el.id = `item-${key}`;
+    el.dataset.key = key;
+    el.style.setProperty('--item-color', color);
+    el.style.setProperty('--item-color-alpha', alpha);
+
+    el.innerHTML = `
+      <div class="tl-dot"></div>
+      <div class="tl-card">
+        <div class="tl-head">
+          <span class="tl-time">${item.time}</span>
+          <span class="tl-title">${item.title}</span>
+          <span class="tl-num">${item._num}</span>
+          <span class="tl-chevron">▼</span>
+        </div>
+        <div class="tl-details">
+          <div class="tl-details-inner">
+            <div class="tl-desc">${item.desc}</div>
+            <div class="tl-tags">${tagsHtml}</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    el.addEventListener('click', () => activateItem(key, true));
+    track.appendChild(el);
+  });
+});
+
+// ═══════════════════════════════════════════════
+//  ACTIVATE ITEM
+// ═══════════════════════════════════════════════
+let expandedKey = null;
+let clickLockUntil = 0;
+
+function activateItem(key, fromClick = false) {
+  if (fromClick) clickLockUntil = Date.now() + 1500;
+  const di = parseInt(key.split('-')[0]);
+
+  // Update day tabs
+  document.querySelectorAll('.day-tab').forEach((t, i) => t.classList.toggle('active', i === di));
+
+  // Update timeline item highlight
+  document.querySelectorAll('.timeline-item').forEach(el => el.classList.remove('active'));
+  const el = document.getElementById(`item-${key}`);
+  if (el) el.classList.add('active');
+
+  // Marker
+  setActiveMarker(key);
+  flyToItem(key);
+
+  // Expand/collapse on click; auto-expand on scroll
+  if (fromClick) {
+    const isSame = expandedKey === key;
+    document.querySelectorAll('.timeline-item').forEach(el => el.classList.remove('expanded'));
+    if (!isSame) {
+      el && el.classList.add('expanded');
+      expandedKey = key;
+    } else {
+      expandedKey = null;
+    }
+  } else {
+    // scroll-driven: auto-expand current, collapse others
+    document.querySelectorAll('.timeline-item').forEach(e => {
+      if (e.dataset.key !== key) e.classList.remove('expanded');
+    });
+    if (el) el.classList.add('expanded');
+    expandedKey = key;
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  INTERSECTION OBSERVER (scroll → map)
+// ═══════════════════════════════════════════════
+const io = new IntersectionObserver((entries) => {
+  // pick the entry with the highest intersectionRatio
+  let best = null;
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      if (!best || e.intersectionRatio > best.intersectionRatio) best = e;
+    }
+  });
+  if (best) {
+    const key = best.target.dataset.key;
+    if (key && key !== activeKey && Date.now() > clickLockUntil) {
+      activateItem(key, false);
+    }
+  }
+}, {
+  root: scrollEl,
+  rootMargin: '-38% 0px -38% 0px',
+  threshold: [0, 0.25, 0.5, 1.0],
+});
+
+document.querySelectorAll('.timeline-item').forEach(el => io.observe(el));
+
+// ═══════════════════════════════════════════════
+//  INITIAL STATE
+// ═══════════════════════════════════════════════
+setTimeout(() => {
+  const firstKey = ITINERARY[0].items[0]._key;
+  activateItem(firstKey, false);
+}, 400);
+</script>
+</body>
+</html>
