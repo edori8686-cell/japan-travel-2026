@@ -278,6 +278,66 @@
     /* ─── MAP ATTRIBUTION FIX ────────────── */
     .leaflet-control-attribution { font-size: 9px !important; }
 
+    /* ─── THUMBNAIL ─────────────────────── */
+    .tl-thumb-wrap { float: left; margin: 0 10px 6px 0; flex-shrink: 0; }
+    .tl-thumb {
+      width: 76px; height: 76px; border-radius: 8px;
+      object-fit: cover; display: block; cursor: zoom-in;
+      background: var(--border);
+      transition: transform 0.2s, opacity 0.3s;
+    }
+    .tl-thumb:hover { transform: scale(1.04); }
+    .tl-title-btn {
+      background: none; border: none; padding: 0;
+      font: inherit; color: inherit; text-align: left; cursor: pointer;
+      font-size: 13px; font-weight: 600; flex: 1; line-height: 1.4;
+      text-decoration: underline dotted rgba(255,255,255,0.25);
+    }
+    .tl-title-btn:hover { text-decoration-color: currentColor; }
+
+    /* ─── LIGHTBOX ───────────────────────── */
+    #lightbox {
+      position: fixed; inset: 0; z-index: 9999;
+      background: rgba(0,0,0,.92);
+      display: none; align-items: center; justify-content: center;
+      cursor: zoom-out;
+    }
+    #lightbox.open { display: flex; }
+    #lightbox img { max-width: 92vw; max-height: 88vh; border-radius: 10px; object-fit: contain; }
+    #lightbox-close {
+      position: absolute; top: 16px; right: 20px;
+      color: white; font-size: 28px; cursor: pointer;
+      background: none; border: none; line-height: 1;
+    }
+
+    /* ─── DETAIL SHEET ────────────────────── */
+    #detailSheet {
+      position: fixed; inset: 0; z-index: 9998;
+      background: rgba(0,0,0,.55);
+      display: none; align-items: flex-end;
+    }
+    #detailSheet.open { display: flex; }
+    #detailBody {
+      width: 100%; background: var(--bg);
+      border-radius: 18px 18px 0 0;
+      max-height: 82vh; overflow-y: auto;
+      animation: slideUp 0.28s cubic-bezier(.32,.72,0,1);
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    #detailHero { width: 100%; height: 190px; object-fit: cover; display: none; }
+    .detail-drag { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 10px auto 0; }
+    .detail-content { padding: 14px 16px 28px; }
+    .detail-title { font-size: 17px; font-weight: 800; margin-bottom: 6px; }
+    .detail-time { font-size: 11px; color: var(--muted); margin-bottom: 12px; }
+    .detail-desc { font-size: 13px; line-height: 1.7; color: var(--muted); }
+    .detail-actions { display: flex; gap: 8px; margin-top: 18px; }
+    .detail-btn {
+      flex: 1; padding: 11px; border-radius: 11px; border: 1.5px solid var(--border);
+      font-size: 13px; font-weight: 700; cursor: pointer;
+      background: var(--card); color: var(--text);
+    }
+    .detail-btn.primary { background: #2563eb; color: white; border-color: #2563eb; }
+
     /* ─── MOBILE ─────────────────────────── */
     @media (max-width: 720px) {
       .main { flex-direction: column; }
@@ -521,6 +581,78 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 
 // ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════════
+//  ITEM META (Wikipedia + URL)
+// ═══════════════════════════════════════════════
+const ITEM_META = {
+  '0-0': { wiki: 'Kansai International Airport' },
+  '0-1': { wiki: 'Kyoto Station' },
+  '0-3': { wiki: 'Fushimi Inari-taisha' },
+  '0-4': { wiki: 'Yasaka Shrine' },
+  '0-5': { wiki: 'Kamo River (Kyoto)' },
+  '1-0': { wiki: 'Arashiyama' },
+  '1-2': { wiki: 'Ginkaku-ji' },
+  '1-3': { wiki: "Philosopher's Walk" },
+  '2-0': { wiki: 'Kiyomizu-dera' },
+  '2-1': { wiki: 'Ninenzaka' },
+  '2-3': { wiki: 'The Graphy Hotel' },
+  '2-4': { wiki: 'Den Den Town' },
+  '2-5': { wiki: 'Dotonbori' },
+  '2-6': { wiki: 'Hozenji Yokocho' },
+  '3-0': { wiki: 'Gozabune' },
+  '3-1': { wiki: 'Osaka Castle' },
+  '3-3': { wiki: 'Umeda Sky Building' },
+  '3-4': { wiki: 'Tsutenkaku' },
+  '3-5': { wiki: 'Wonder Osaka' },
+  '4-2': { wiki: 'Shinsaibashi' },
+  '4-3': { wiki: 'Nankai Rapi:t' },
+  '4-4': { wiki: 'Kansai International Airport' },
+};
+
+// Wikipedia thumbnail lazy-fetch
+const _thumbCache = {};
+async function fetchWikiThumb(wiki) {
+  if (_thumbCache[wiki] !== undefined) return _thumbCache[wiki];
+  _thumbCache[wiki] = null;
+  try {
+    const r = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(wiki)}`);
+    if (r.ok) {
+      const d = await r.json();
+      _thumbCache[wiki] = d.thumbnail?.source ?? null;
+    }
+  } catch (_) {}
+  return _thumbCache[wiki];
+}
+
+// Lightbox
+const _lb = document.getElementById('lightbox');
+const _lbImg = document.getElementById('lightbox-img');
+function openLightbox(src) { _lbImg.src = src; _lb.classList.add('open'); }
+_lb.addEventListener('click', () => _lb.classList.remove('open'));
+document.getElementById('lightbox-close').addEventListener('click', e => { e.stopPropagation(); _lb.classList.remove('open'); });
+
+// Detail sheet
+const _ds = document.getElementById('detailSheet');
+let _dsItem = null;
+function openDetail(item, key) {
+  _dsItem = item;
+  document.getElementById('detailTitle').textContent = item.title;
+  document.getElementById('detailTime').textContent = item.time;
+  document.getElementById('detailDesc').textContent = item.desc;
+  const hero = document.getElementById('detailHero');
+  const meta = ITEM_META[key];
+  if (meta?.wiki && _thumbCache[meta.wiki]) {
+    hero.src = _thumbCache[meta.wiki];
+    hero.style.display = 'block';
+  } else { hero.style.display = 'none'; }
+  document.getElementById('detailMap').onclick = () =>
+    window.open(`https://maps.google.com/?q=${item.lat},${item.lng}`, '_blank');
+  _ds.classList.add('open');
+}
+document.getElementById('detailClose').addEventListener('click', () => _ds.classList.remove('open'));
+_ds.addEventListener('click', e => { if (e.target === _ds) _ds.classList.remove('open'); });
+
+// ═══════════════════════════════════════════════
 //  MARKERS
 // ═══════════════════════════════════════════════
 const markers = {};   // key → { marker, dayIdx, itemIdx }
@@ -728,17 +860,19 @@ ITINERARY.forEach((day, di) => {
     el.style.setProperty('--item-color', color);
     el.style.setProperty('--item-color-alpha', alpha);
 
+    const hasMeta = !!ITEM_META[key];
     el.innerHTML = `
       <div class="tl-dot"></div>
       <div class="tl-card">
         <div class="tl-head">
           <span class="tl-time">${item.time}</span>
-          <span class="tl-title">${item.title}</span>
+          <button class="tl-title-btn" data-detail="${key}">${item.title}</button>
           <span class="tl-num">${item._num}</span>
           <span class="tl-chevron">▼</span>
         </div>
         <div class="tl-details">
           <div class="tl-details-inner">
+            ${hasMeta ? `<div class="tl-thumb-wrap"><img id="thumb-${key}" class="tl-thumb" src="" alt="" style="opacity:0" data-thumb="${key}"></div>` : ''}
             <div class="tl-desc">${item.desc}</div>
             <div class="tl-tags">${tagsHtml}</div>
           </div>
@@ -780,6 +914,7 @@ function activateItem(key, fromClick = false) {
     if (!isSame) {
       el && el.classList.add('expanded');
       expandedKey = key;
+      loadThumbForKey(key);
     } else {
       expandedKey = null;
     }
@@ -790,6 +925,7 @@ function activateItem(key, fromClick = false) {
     });
     if (el) el.classList.add('expanded');
     expandedKey = key;
+    loadThumbForKey(key);
   }
 }
 
@@ -818,6 +954,41 @@ const io = new IntersectionObserver((entries) => {
 
 document.querySelectorAll('.timeline-item').forEach(el => io.observe(el));
 
+// ─── Title button → detail sheet ─────────────────
+scrollEl.addEventListener('click', e => {
+  const btn = e.target.closest('.tl-title-btn');
+  if (!btn) return;
+  e.stopPropagation();
+  const key = btn.dataset.detail;
+  const info = markers[key];
+  if (!info) return;
+  openDetail(ITINERARY[info.dayIdx].items[info.itemIdx], key);
+});
+
+// ─── Thumbnail → lightbox ─────────────────────────
+scrollEl.addEventListener('click', e => {
+  const img = e.target.closest('.tl-thumb');
+  if (!img || !img.src || img.style.opacity === '0') return;
+  e.stopPropagation();
+  openLightbox(img.src);
+});
+
+// ─── Fetch wiki thumb on expand ───────────────────
+function loadThumbForKey(key) {
+  const meta = ITEM_META[key];
+  if (!meta?.wiki) return;
+  fetchWikiThumb(meta.wiki).then(src => {
+    if (!src) return;
+    const img = document.getElementById(`thumb-${key}`);
+    if (img) { img.src = src; img.style.opacity = '1'; }
+    // update hero if detail sheet is open for this item
+    const hero = document.getElementById('detailHero');
+    if (_ds.classList.contains('open') && hero.style.display === 'none') {
+      hero.src = src; hero.style.display = 'block';
+    }
+  });
+}
+
 // ═══════════════════════════════════════════════
 //  INITIAL STATE
 // ═══════════════════════════════════════════════
@@ -826,5 +997,28 @@ setTimeout(() => {
   activateItem(firstKey, false);
 }, 400);
 </script>
+
+<!-- Lightbox -->
+<div id="lightbox">
+  <button id="lightbox-close">✕</button>
+  <img id="lightbox-img" src="" alt="">
+</div>
+
+<!-- Detail Sheet -->
+<div id="detailSheet">
+  <div id="detailBody">
+    <div class="detail-drag"></div>
+    <img id="detailHero" src="" alt="">
+    <div class="detail-content">
+      <div class="detail-title" id="detailTitle"></div>
+      <div class="detail-time" id="detailTime"></div>
+      <div class="detail-desc" id="detailDesc"></div>
+      <div class="detail-actions">
+        <button class="detail-btn" id="detailClose">닫기</button>
+        <button class="detail-btn primary" id="detailMap">🗺️ 지도에서 보기</button>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
