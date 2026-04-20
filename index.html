@@ -289,11 +289,15 @@
     .tl-thumb:hover { transform: scale(1.04); }
     .tl-title-btn {
       background: none; border: none; padding: 0;
-      font: inherit; color: inherit; text-align: left; cursor: pointer;
+      font: inherit; text-align: left; cursor: pointer;
       font-size: 13px; font-weight: 600; flex: 1; line-height: 1.4;
-      text-decoration: underline dotted rgba(255,255,255,0.25);
+      color: #60a5fa;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      text-decoration-color: rgba(96,165,250,0.4);
     }
-    .tl-title-btn:hover { text-decoration-color: currentColor; }
+    .tl-title-btn:hover,
+    .timeline-item.active .tl-title-btn { text-decoration-color: #60a5fa; }
 
     /* ─── LIGHTBOX ───────────────────────── */
     #lightbox {
@@ -903,7 +907,9 @@ ITINERARY.forEach((day, di) => {
       </div>
     `;
 
-    el.addEventListener('click', () => activateItem(key, true));
+    el.addEventListener('click', e => {
+      if (!e.target.closest('.tl-title-btn')) activateItem(key, true);
+    });
     track.appendChild(el);
   });
 });
@@ -977,7 +983,7 @@ const io = new IntersectionObserver((entries) => {
 
 document.querySelectorAll('.timeline-item').forEach(el => io.observe(el));
 
-// ─── Title button → detail sheet ─────────────────
+// ─── Title button → activate or detail ───────────
 scrollEl.addEventListener('click', e => {
   const btn = e.target.closest('.tl-title-btn');
   if (!btn) return;
@@ -985,7 +991,11 @@ scrollEl.addEventListener('click', e => {
   const key = btn.dataset.detail;
   const info = markers[key];
   if (!info) return;
-  openDetail(ITINERARY[info.dayIdx].items[info.itemIdx], key);
+  if (activeKey === key) {
+    openDetail(ITINERARY[info.dayIdx].items[info.itemIdx], key);
+  } else {
+    activateItem(key, true);
+  }
 });
 
 // ─── Thumbnail → lightbox ─────────────────────────
