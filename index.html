@@ -1029,7 +1029,9 @@ setTimeout(() => {
   const firstKey = ITINERARY[0].items[0]._key;
   activateItem(firstKey, false);
   const firstEl = document.getElementById(`item-${firstKey}`);
-  if (firstEl) firstEl.scrollIntoView({ block: 'center', behavior: 'instant' });
+  if (firstEl) {
+    scrollEl.scrollTop = firstEl.offsetTop - (scrollEl.clientHeight - firstEl.offsetHeight) / 2;
+  }
 }, 400);
 </script>
 
