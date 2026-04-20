@@ -363,6 +363,29 @@
   </div>
 </div>
 
+<!-- Lightbox -->
+<div id="lightbox">
+  <button id="lightbox-close">✕</button>
+  <img id="lightbox-img" src="" alt="">
+</div>
+
+<!-- Detail Sheet -->
+<div id="detailSheet">
+  <div id="detailBody">
+    <div class="detail-drag"></div>
+    <img id="detailHero" src="" alt="">
+    <div class="detail-content">
+      <div class="detail-title" id="detailTitle"></div>
+      <div class="detail-time" id="detailTime"></div>
+      <div class="detail-desc" id="detailDesc"></div>
+      <div class="detail-actions">
+        <button class="detail-btn" id="detailClose">닫기</button>
+        <button class="detail-btn primary" id="detailMap">🗺️ 지도에서 보기</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 // ═══════════════════════════════════════════════
 //  DATA
@@ -998,27 +1021,5 @@ setTimeout(() => {
 }, 400);
 </script>
 
-<!-- Lightbox -->
-<div id="lightbox">
-  <button id="lightbox-close">✕</button>
-  <img id="lightbox-img" src="" alt="">
-</div>
-
-<!-- Detail Sheet -->
-<div id="detailSheet">
-  <div id="detailBody">
-    <div class="detail-drag"></div>
-    <img id="detailHero" src="" alt="">
-    <div class="detail-content">
-      <div class="detail-title" id="detailTitle"></div>
-      <div class="detail-time" id="detailTime"></div>
-      <div class="detail-desc" id="detailDesc"></div>
-      <div class="detail-actions">
-        <button class="detail-btn" id="detailClose">닫기</button>
-        <button class="detail-btn primary" id="detailMap">🗺️ 지도에서 보기</button>
-      </div>
-    </div>
-  </div>
-</div>
 </body>
 </html>
