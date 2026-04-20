@@ -155,6 +155,19 @@
       opacity: 0.4;
     }
 
+    /* ─── TRANSPORT ANIMATION ───────────── */
+    .transport-icon {
+      background: none !important;
+      border: none !important;
+      pointer-events: none;
+      filter: drop-shadow(0 1px 3px rgba(0,0,0,0.4));
+      animation: transport-bounce 0.4s ease infinite alternate;
+    }
+    @keyframes transport-bounce {
+      from { transform: translateY(0) scale(1); }
+      to   { transform: translateY(-3px) scale(1.1); }
+    }
+
     /* ─── TIMELINE ITEM ──────────────────── */
     .timeline-item {
       position: relative;
@@ -553,12 +566,95 @@ ITINERARY.forEach((day, di) => {
   });
 });
 
-function flyToItem(key) {
+// ─── TRANSPORT ANIMATION ────────────────────────
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371e3, toRad = x => x * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1), dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function transportIcon(dist, fromKey) {
+  if (fromKey === '0-0') return '✈️';
+  if (dist < 700) return '🚶';
+  if (dist < 4000) return '🚇';
+  return '🚃';
+}
+
+let _animMarker = null, _animLine = null;
+function clearTransitAnim() {
+  if (_animMarker) { map.removeLayer(_animMarker); _animMarker = null; }
+  if (_animLine)   { map.removeLayer(_animLine);   _animLine   = null; }
+}
+
+function isAdjacent(keyA, keyB) {
+  if (!keyA || !keyB) return false;
+  const [da, ia] = keyA.split('-').map(Number);
+  const [db, ib] = keyB.split('-').map(Number);
+  if (da === db) return Math.abs(ia - ib) === 1;
+  if (db === da + 1 && ib === 0) return ia === ITINERARY[da].items.length - 1;
+  if (da === db + 1 && ia === 0) return ib === ITINERARY[db].items.length - 1;
+  return false;
+}
+
+function animateTransit(fromItem, toItem, fromKey) {
+  clearTransitAnim();
+  const dist = haversine(fromItem.lat, fromItem.lng, toItem.lat, toItem.lng);
+  const emoji = transportIcon(dist, fromKey);
+
+  _animLine = L.polyline(
+    [[fromItem.lat, fromItem.lng], [toItem.lat, toItem.lng]],
+    { color: '#aaa', weight: 2, dashArray: '5 7', opacity: 0.7 }
+  ).addTo(map);
+
+  _animMarker = L.marker([fromItem.lat, fromItem.lng], {
+    icon: L.divIcon({
+      className: 'transport-icon',
+      html: `<span style="font-size:20px">${emoji}</span>`,
+      iconSize: [28, 28], iconAnchor: [14, 14]
+    }),
+    zIndexOffset: 2000, interactive: false
+  }).addTo(map);
+
+  const dur = 1100, start = Date.now();
+  const easeInOut = t => t < .5 ? 2*t*t : -1 + (4 - 2*t)*t;
+  (function step() {
+    const t = Math.min((Date.now() - start) / dur, 1);
+    const e = easeInOut(t);
+    _animMarker.setLatLng([
+      fromItem.lat + (toItem.lat - fromItem.lat) * e,
+      fromItem.lng + (toItem.lng - fromItem.lng) * e
+    ]);
+    if (t < 1) requestAnimationFrame(step);
+    else setTimeout(clearTransitAnim, 400);
+  })();
+}
+// ────────────────────────────────────────────────
+
+let _scrollFlyTimer = null;
+
+function flyToItem(key, fromClick = false) {
   const info = markers[key];
   if (!info) return;
-  const item = ITINERARY[info.dayIdx].items[info.itemIdx];
-  const zoom = item.lat < 34.6 ? 13 : 15;
-  map.flyTo([item.lat, item.lng], zoom, { duration: 1.0, easeLinearity: 0.5 });
+
+  const doFly = () => {
+    const item = ITINERARY[info.dayIdx].items[info.itemIdx];
+    if (fromClick && activeKey && isAdjacent(activeKey, key)) {
+      const prev = markers[activeKey];
+      const fromItem = ITINERARY[prev.dayIdx].items[prev.itemIdx];
+      animateTransit(fromItem, item, activeKey);
+    }
+    const zoom = item.lat < 34.6 ? 13 : 15;
+    map.flyTo([item.lat, item.lng], zoom, { duration: 1.0, easeLinearity: 0.5 });
+  };
+
+  if (fromClick) {
+    clearTimeout(_scrollFlyTimer);
+    doFly();
+  } else {
+    clearTimeout(_scrollFlyTimer);
+    _scrollFlyTimer = setTimeout(doFly, 180);
+  }
 }
 
 function setActiveMarker(key) {
@@ -675,7 +771,7 @@ function activateItem(key, fromClick = false) {
 
   // Marker
   setActiveMarker(key);
-  flyToItem(key);
+  flyToItem(key, fromClick);
 
   // Expand/collapse on click; auto-expand on scroll
   if (fromClick) {
