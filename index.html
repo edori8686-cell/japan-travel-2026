@@ -962,23 +962,24 @@ function activateItem(key, fromClick = false) {
 //  INTERSECTION OBSERVER (scroll → map)
 // ═══════════════════════════════════════════════
 const io = new IntersectionObserver((entries) => {
-  // pick the entry with the highest intersectionRatio
-  let best = null;
+  if (Date.now() <= clickLockUntil) return;
+  // pick the item whose center is closest to the scroll container's center
+  const containerMid = scrollEl.getBoundingClientRect().top + scrollEl.clientHeight / 2;
+  let best = null, bestDist = Infinity;
   entries.forEach(e => {
-    if (e.isIntersecting) {
-      if (!best || e.intersectionRatio > best.intersectionRatio) best = e;
-    }
+    if (!e.isIntersecting) return;
+    const itemMid = e.boundingClientRect.top + e.boundingClientRect.height / 2;
+    const dist = Math.abs(itemMid - containerMid);
+    if (dist < bestDist) { bestDist = dist; best = e; }
   });
   if (best) {
     const key = best.target.dataset.key;
-    if (key && key !== activeKey && Date.now() > clickLockUntil) {
-      activateItem(key, false);
-    }
+    if (key && key !== activeKey) activateItem(key, false);
   }
 }, {
   root: scrollEl,
-  rootMargin: '-45% 0px -45% 0px',
-  threshold: [0, 0.25, 0.5, 1.0],
+  rootMargin: '-40% 0px -40% 0px',
+  threshold: [0.1, 0.5, 1.0],
 });
 
 document.querySelectorAll('.timeline-item').forEach(el => io.observe(el));
@@ -1030,7 +1031,11 @@ setTimeout(() => {
   activateItem(firstKey, false);
   const firstEl = document.getElementById(`item-${firstKey}`);
   if (firstEl) {
-    scrollEl.scrollTop = firstEl.offsetTop - (scrollEl.clientHeight - firstEl.offsetHeight) / 2;
+    // getBoundingClientRect gives viewport-relative coords → add scrollTop for content-absolute position
+    const itemTopInContent = firstEl.getBoundingClientRect().top
+      - scrollEl.getBoundingClientRect().top
+      + scrollEl.scrollTop;
+    scrollEl.scrollTop = itemTopInContent - (scrollEl.clientHeight - firstEl.offsetHeight) / 2;
   }
 }, 400);
 </script>
