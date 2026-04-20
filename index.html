@@ -334,6 +334,15 @@
     .detail-title { font-size: 17px; font-weight: 800; margin-bottom: 6px; }
     .detail-time { font-size: 11px; color: var(--muted); margin-bottom: 12px; }
     .detail-desc { font-size: 13px; line-height: 1.7; color: var(--muted); }
+    .detail-memo {
+      margin-top: 12px; padding: 10px 12px;
+      background: rgba(96,165,250,0.08); border-left: 3px solid #3b82f6;
+      border-radius: 0 6px 6px 0; font-size: 12px; line-height: 1.7; color: var(--fg);
+      white-space: pre-wrap;
+    }
+    .tl-title-plain {
+      font-size: 13px; font-weight: 600; flex: 1; line-height: 1.4; color: var(--fg);
+    }
     .detail-actions { display: flex; gap: 8px; margin-top: 18px; }
     .detail-btn {
       flex: 1; padding: 11px; border-radius: 11px; border: 1.5px solid var(--border);
@@ -382,6 +391,7 @@
       <div class="detail-title" id="detailTitle"></div>
       <div class="detail-time" id="detailTime"></div>
       <div class="detail-desc" id="detailDesc"></div>
+      <div class="detail-memo" id="detailMemo" style="display:none"></div>
       <div class="detail-actions">
         <button class="detail-btn" id="detailClose">닫기</button>
         <button class="detail-btn primary" id="detailMap">🗺️ 지도에서 보기</button>
@@ -612,28 +622,33 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 //  ITEM META (Wikipedia + URL)
 // ═══════════════════════════════════════════════
 const ITEM_META = {
-  '0-0': { wiki: 'Kansai International Airport' },
-  '0-1': { wiki: 'Kyoto Station' },
-  '0-3': { wiki: 'Fushimi Inari-taisha' },
-  '0-4': { wiki: 'Yasaka Shrine' },
-  '0-5': { wiki: 'Kamo River (Kyoto)' },
-  '1-0': { wiki: 'Arashiyama' },
-  '1-2': { wiki: 'Ginkaku-ji' },
-  '1-3': { wiki: "Philosopher's Walk" },
-  '2-0': { wiki: 'Kiyomizu-dera' },
-  '2-1': { wiki: 'Ninenzaka' },
+  '0-0': { wiki: 'Kansai International Airport', details: '진에어 7C1391 도착 (09:50). 하루카 트레인 지정석 예약 완료 — 시간변경 가능. 간사이공항역 → 교토역 75분.' },
+  '0-1': { wiki: 'Kyoto Station', details: '교토역 JR 이세탄 3층. 교토 대표 케이크·과자 브랜드 마르블랑슈. 진열 품절 잦으니 도착 즉시 방문 필수.' },
+  '0-2': {},
+  '0-3': { wiki: 'Fushimi Inari-taisha', details: '입장 무료 / 24시간. 센본도리이(중간)까지 30~40분, 정상 왕복 2~3시간.\n⏰ 오전 7~9시 또는 해질 무렵 추천 — 낮에는 관광객 많음.' },
+  '0-4': { wiki: 'Yasaka Shrine', details: '무료 / 24시간. 밤 8시 이후 강추 — 붉은 등불 야경 & 한산.\n⚠️ 하나미코지 골목 사진 촬영 금지.' },
+  '0-5': { wiki: 'Kamo River (Kyoto)', details: '야사카신사에서 도보 10분. 강변 산책 무료. 저녁~밤 분위기 최고.' },
+  '1-0': { wiki: 'Arashiyama', details: '란덴선 6:10 첫차 탑승. 죽림(치쿠린) 무료 입장.\n⚠️ 이른 아침 방문 필수 — 9시 이후 급격히 혼잡. 텐류지 북문 출발 코스 추천.' },
+  '1-1': {},
+  '1-2': { wiki: 'Ginkaku-ji', details: '입장 500엔 (현금만) / 08:30~17:00. 이끼 정원·모래 정원 유명. 오픈 직후 방문 추천.' },
+  '1-3': { wiki: "Philosopher's Walk", details: '철학의 길 2.1km 무료 산책 약 30분. 난젠지 경내·수로각(アクアダクト) 무료 입장. 산문·정원은 별도 600엔.' },
+  '2-0': { wiki: 'Kiyomizu-dera', details: '입장료 400~500엔 (현금만). 6시 오픈 — 9시부터 급격히 혼잡.\n포토스팟: 절벽 위 목조 무대.' },
+  '2-1': { wiki: 'Ninenzaka', details: '무료 / 24시간. 청수사→산넨자카→니넨자카 내리막 코스.\n⚠️ 돌바닥 미끄러움 주의. 카페 응커피 30분 웨이팅.' },
+  '2-2': {},
   '2-3': { wiki: 'The Graphy Hotel' },
-  '2-4': { wiki: 'Den Den Town' },
-  '2-5': { wiki: 'Dotonbori' },
-  '2-6': { wiki: 'Hozenji Yokocho' },
-  '3-0': { wiki: 'Gozabune' },
-  '3-1': { wiki: 'Osaka Castle' },
-  '3-3': { wiki: 'Umeda Sky Building' },
-  '3-4': { wiki: 'Tsutenkaku' },
-  '3-5': { wiki: 'Wonder Osaka' },
-  '4-2': { wiki: 'Shinsaibashi' },
-  '4-3': { wiki: 'Nankai Rapi:t' },
-  '4-4': { wiki: 'Kansai International Airport' },
+  '2-4': { wiki: 'Den Den Town', details: '다카시마야 난바점 지하 식품관·샌드위치(日本橋 산도). 덴덴타운 전자상가·오타쿠 거리 도보 권역.' },
+  '2-5': { wiki: 'Dotonbori', details: '글리코 러닝맨 인증샷 필수. 에비스바시 다리 야경. 타코야키·쿠시카츠·오코노미야키 맛집 밀집. 24시간 활기.' },
+  '2-6': { wiki: 'Hozenji Yokocho', details: '도톤보리 뒤편 이끼낀 골목. 미즈카케 부동명왕 소원. 밤 9시 이후 분위기 최고.\n미슐랭 레스토랑 숨어있음.' },
+  '3-0': { wiki: 'Gozabune', details: '1,800엔 / 주유패스 무료 (벚꽃 만개 기간 제외).\n⚠️ 도착 즉시 시간표 확보 필수 — 만석 마감. 10시 출발.' },
+  '3-1': { wiki: 'Osaka Castle', details: '1,200엔 (2025.4 인상) / 주유패스 무료. 09:00~18:00 (최종 입장 16:30).\n8층 전망대 360도 파노라마. 중학생 이하 무료.' },
+  '3-2': {},
+  '3-3': { wiki: 'Umeda Sky Building', details: '2,000엔 / 주유패스 15시 전 무료.\n⚠️ 15시 이후는 유료 (2,000엔). 173m 옥상 전망대. 우메다역 도보 13분.' },
+  '3-4': { wiki: 'Tsutenkaku', details: '1,200엔 / 주유패스 무료.\n⚠️ 쿠시카츠 소스 두 번 찍기 절대 금지. 빌리켄 발바닥 소원. 밤 네온사인 분위기 압도적.' },
+  '3-5': { wiki: 'Wonder Osaka', details: '2,000엔 / 주유패스 무료.\n⚠️ 사전 예약 필수 — 해질 무렵 조기 마감. 도톤보리 리버워크 B1. 20분 운항.\n예약: ipponmatsu.co.jp' },
+  '4-0': {},
+  '4-1': {},
+  '4-2': { wiki: 'Nankai Rapi:t', details: '난바역 → 간사이 공항 38분 (1,450엔).\n⚠️ 늦어도 16시 출발. 공항 2터미널 도착. 진에어 7C1308 19:55 출발.' },
+  '4-3': { wiki: 'Kansai International Airport' },
 };
 
 // Wikipedia thumbnail lazy-fetch
@@ -666,8 +681,11 @@ function openDetail(item, key) {
   document.getElementById('detailTitle').textContent = item.title;
   document.getElementById('detailTime').textContent = item.time;
   document.getElementById('detailDesc').textContent = item.desc;
+  const memoEl = document.getElementById('detailMemo');
   const hero = document.getElementById('detailHero');
-  const meta = ITEM_META[key];
+  const meta = ITEM_META[key] || {};
+  if (meta.details) { memoEl.textContent = meta.details; memoEl.style.display = 'block'; }
+  else { memoEl.textContent = ''; memoEl.style.display = 'none'; }
   if (meta?.wiki && _thumbCache[meta.wiki]) {
     hero.src = _thumbCache[meta.wiki];
     hero.style.display = 'block';
@@ -845,7 +863,13 @@ ITINERARY.forEach((day, di) => {
   tab.dataset.di = di;
   tab.innerHTML = `<span class="d-num">D${di + 1}</span><span class="d-date">${day.date.split(' ')[0]}</span>`;
   tab.addEventListener('click', () => {
-    document.getElementById(`day-${di}`).scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const firstKey = ITINERARY[di].items[0]._key;
+    activateItem(firstKey, true);
+    const firstEl = document.getElementById(`item-${firstKey}`);
+    if (firstEl) {
+      const top = firstEl.getBoundingClientRect().top - scrollEl.getBoundingClientRect().top + scrollEl.scrollTop;
+      scrollEl.scrollTo({ top: top - (scrollEl.clientHeight - firstEl.offsetHeight) / 2, behavior: 'smooth' });
+    }
   });
   dayTabsEl.appendChild(tab);
 });
@@ -887,19 +911,24 @@ ITINERARY.forEach((day, di) => {
     el.style.setProperty('--item-color', color);
     el.style.setProperty('--item-color-alpha', alpha);
 
-    const hasMeta = !!ITEM_META[key];
+    const meta = ITEM_META[key] || {};
+    const hasWiki = !!meta.wiki;
+    const hasDetails = !!meta.details;
+    const titleHtml = hasDetails
+      ? `<button class="tl-title-btn" data-detail="${key}">${item.title}</button>`
+      : `<span class="tl-title-plain">${item.title}</span>`;
     el.innerHTML = `
       <div class="tl-dot"></div>
       <div class="tl-card">
         <div class="tl-head">
           <span class="tl-time">${item.time}</span>
-          <button class="tl-title-btn" data-detail="${key}">${item.title}</button>
+          ${titleHtml}
           <span class="tl-num">${item._num}</span>
           <span class="tl-chevron">▼</span>
         </div>
         <div class="tl-details">
           <div class="tl-details-inner">
-            ${hasMeta ? `<div class="tl-thumb-wrap"><img id="thumb-${key}" class="tl-thumb" src="" alt="" style="opacity:0" data-thumb="${key}"></div>` : ''}
+            ${hasWiki ? `<div class="tl-thumb-wrap"><img id="thumb-${key}" class="tl-thumb" src="" alt="" style="opacity:0" data-thumb="${key}"></div>` : ''}
             <div class="tl-desc">${item.desc}</div>
             <div class="tl-tags">${tagsHtml}</div>
           </div>
