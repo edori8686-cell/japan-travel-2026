@@ -834,8 +834,19 @@ function flyToItem(key, fromClick = false) {
   }
 }
 
+// Day route polylines (connect items within each day)
+const dayRoutes = {};
+ITINERARY.forEach((day, di) => {
+  const latlngs = day.items.map(item => [item.lat, item.lng]);
+  dayRoutes[di] = L.polyline(latlngs, {
+    color: DAY_COLORS[di], weight: 2.5, opacity: 0.15, dashArray: '6 5',
+  }).addTo(map);
+});
+
 function setActiveMarker(key) {
   if (activeKey === key) return;
+  const di = parseInt(key.split('-')[0]);
+
   if (activeKey && markers[activeKey]) {
     const prev = markers[activeKey];
     const prevItem = ITINERARY[prev.dayIdx].items[prev.itemIdx];
@@ -846,6 +857,21 @@ function setActiveMarker(key) {
     const currItem = ITINERARY[curr.dayIdx].items[curr.itemIdx];
     curr.marker.setIcon(makeIcon(DAY_COLORS[curr.dayIdx], currItem._num, true));
   }
+
+  // Fade markers from non-active days
+  Object.keys(markers).forEach(k => {
+    const el = markers[k].marker.getElement();
+    if (el) el.style.opacity = markers[k].dayIdx === di ? '1' : '0.25';
+  });
+
+  // Show active day route, fade others
+  Object.keys(dayRoutes).forEach(d => {
+    dayRoutes[d].setStyle({
+      opacity: parseInt(d) === di ? 0.65 : 0.12,
+      weight: parseInt(d) === di ? 3 : 1.5,
+    });
+  });
+
   activeKey = key;
 }
 
